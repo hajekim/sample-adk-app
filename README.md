@@ -1,2 +1,129 @@
-# sample-adk-app
-A sample agent app based on the Google ADK framework.
+# ADK 샘플 에이전트 프로젝트
+
+이 프로젝트는 Google ADK (Agent Development Kit)를 사용하여 다양한 기능을 수행하는 에이전트를 구축하는 방법을 보여주는 샘플입니다.
+
+## 프로젝트 설명
+
+이 프로젝트는 다음과 같은 주요 구성 요소로 이루어져 있습니다.
+
+*   **SearchAgent**: Google 검색을 통해 사용자 쿼리를 처리하는 에이전트입니다.
+*   **CodeAgent**: 코드 실행을 통해 사용자 쿼리를 계산하고 해결하는 에이전트입니다.
+*   **get\_weather 함수**: OpenWeather API를 호출하여 특정 도시의 날씨 정보를 가져오는 도구입니다.
+*   **RootAgent**: 위의 에이전트들과 `get_weather` 도구를 통합하여 관리하고 호출하는 최상위 에이전트입니다.
+
+## 주요 기능
+
+### 1. SearchAgent
+
+*   **설명**: 사용자의 검색 요청을 받아 Google 검색을 수행하고 결과를 반환합니다.
+*   **모델**: `gemini-2.5-pro-preview-05-06`
+*   **도구**: `google_search` (내장 도구)
+
+### 2. CodeAgent
+
+*   **설명**: 사용자의 코드 실행 요청을 받아 코드를 실행하고 결과를 반환합니다.
+*   **모델**: `gemini-2.5-pro-preview-05-06`
+*   **도구**: `built_in_code_execution` (내장 도구)
+
+### 3. get\_weather 함수 (도구)
+
+*   **설명**: 사용자가 특정 도시의 날씨를 문의하면 OpenWeather API를 통해 해당 도시의 날씨 정보를 영어로 검색하여 반환합니다.
+*   **API 키 설정**: 이 도구를 사용하려면 OpenWeather API 키가 필요합니다. 환경 변수 `OPENWEATHER_API_KEY`에 발급받은 API 키를 설정해야 합니다.
+    *   API 키 발급처: [https://openweathermap.org/](https://openweathermap.org/)
+    *   **참고**: API 키 발급 후 활성화까지 시간이 걸릴 수 있습니다. 401 오류 발생 시 잠시 후 다시 시도해 주세요.
+*   **Docstring**: 함수 내 Docstring은 에이전트가 이 도구의 기능과 사용법(인자, 반환 값 등)을 이해하는 데 중요한 역할을 합니다.
+
+### 4. RootAgent
+
+*   **설명**: `SearchAgent`, `CodeAgent`, `get_weather` 도구를 하위 도구로 사용하여 사용자의 다양한 요청을 적절히 분배하고 처리하는 메인 에이전트입니다.
+*   **모델**: `gemini-2.5-pro-preview-05-06`
+
+## 코드 구조 (`agent.py`)
+
+```python
+import os
+import logging
+logging.basicConfig(level=logging.INFO)
+
+# Google ADK 라이브러리를 가져옵니다.
+from google.adk.tools import agent_tool
+from google.adk.agents import Agent
+from google.adk.tools import google_search, built_in_code_execution
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
+
+# Gemini 모델 변수를 선언합니다.
+GEMINI_MODEL='gemini-2.5-pro-preview-05-06' # Gemini 2.5 Pro Preview
+# GEMINI_MODEL='gemini-2.5-flash-preview-04-17' # Gemini 2.5 Flash Preview
+
+# 내장된 구글 검색 도구를 사용하는 search_agent 에이전트를 초기화합니다.
+search_agent = Agent(
+    name='SearchAgent',
+    description="An agent that retrieves users' queries through Google Search.",
+    model=GEMINI_MODEL,
+    instruction="""
+    You're a specialist in Google Search
+    """,
+    tools=[google_search],
+)
+
+# 내장된 코드 실행 도구를 사용하는 coding_agent 에이전트를 초기화합니다.
+coding_agent = Agent(
+    name='CodeAgent',
+    description="An agent that solves users' queries by calculating them through code.",
+    model=GEMINI_MODEL,
+    instruction="""
+    You're a specialist in Code Execution
+    """,
+    tools=[built_in_code_execution],
+)
+
+
+# OpenWeather API를 호출하는 get_weather 함수를 정의합니다.
+# OpenWeather API를 사용하기 위해서는 API 키를 발급받아야 합니다.
+# 발급 주소: https://openweathermap.org/
+# 발급 후 API 키가 활성화되는 데 시간이 소요될 수 있으므로, 401 에러가 발생하면 잠시 후 다시 시도해 보십시오.
+def get_weather(city:str):
+    # 도구의 Docstring은 에이전트가 도구를 이해하는데 도움이 됩니다.
+    """When a user asks for the weather, the OpenWeather API searches for the city name the user is asking about in English.
+
+    Args:
+        city (str): The name of city.
+
+    Returns:
+        json: Weather response
+    """
+    
+    import requests
+    # weather_api_key ='9dd70e5a479863d13b85af7fe2af8b40'
+    weather_api_key =os.environ.get("OPENWEATHER_API_KEY")
+
+    ## API 요청
+    url = f'http://api.openweathermap.org/data/2.5/weather?q={city}&appid={weather_api_key}'
+    
+    response = requests.get(url)
+    data = response.json()
+    return data
+
+
+# Root Agent를 초기화합니다.
+# 이 에이전트에서는 앞서 선언한 에이전트와 도구를 호출할 수 있도록 설정합니다.
+root_agent = Agent(
+    name='RootAgent',
+    description='Root Agent',
+    model=GEMINI_MODEL,
+    tools=[
+        # Google Search 에이전트 호출
+        agent_tool.AgentTool(agent=search_agent),
+        # Code Execution 에이전트 호출
+        agent_tool.AgentTool(agent=coding_agent),
+        # OpenWeather API 도구 호출
+        get_weather
+        ],
+)
+```
+
+## 참고 문서
+
+*   [Google ADK Documentation](https://google.github.io/adk-docs/)
+*   [Google ADK Quickstart](https://google.github.io/adk-docs/get-started/quickstart/)
+*   [Google ADK MCP Tools](https://google.github.io/adk-docs/tools/mcp-tools/)
