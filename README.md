@@ -6,12 +6,19 @@
 
 이 프로젝트는 다음과 같은 주요 구성 요소로 이루어져 있습니다.
 
-*   **SearchAgent**: Google 검색을 통해 사용자 쿼리를 처리하는 에이전트입니다.
-*   **CodeAgent**: 코드 실행을 통해 사용자 쿼리를 계산하고 해결하는 에이전트입니다.
-*   **get\_weather 함수**: OpenWeather API를 호출하여 특정 도시의 날씨 정보를 가져오는 도구입니다.
-*   **MapsAgent**: Google Maps MCP 서버를 통해 지도, 길 찾기, 장소 검색 등의 기능을 제공하는 에이전트입니다.
-*   **RootAgent**: 위의 에이전트들과 `get_weather` 도구, `
-sAgent`를 통합하여 관리하고 호출하는 최상위 에이전트입니다.
+*   **SearchAgent**: 빌트인된 `google_search` 도구를 활용하여 Google 검색을 통해 사용자 쿼리를 처리하는 에이전트입니다.
+*   **CodeAgent**: 빌트인된 `BuiltInCodeExecutor` 도구를 활용하여 코드 실행을 통해 사용자 쿼리를 계산하고 해결하는 에이전트입니다.
+*   **MapsAgent**: `Google Maps MCP 서버`를 활용하여 구글 지도의 길 찾기, 장소 검색 등의 기능을 제공하는 에이전트입니다.
+*   **get\_weather 함수**: `OpenWeather API`를 호출하여 특정 도시의 날씨 정보를 가져오는 도구입니다.
+*   **RootAgent**: 위의 에이전트들과 `get_weather` 도구, `SearchAgent` 에이전트, `MapshAgent` 에이전트, `CodeAgent` 에이전트를 통합하여 관리하고 호출하는 최상위 에이전트입니다.
+
+## 디렉토리 구조
+```
+sample-adk-app/  # 프로젝트 폴더
+    ├── .env # Gemini, Google Maps, OpenWeather API key (.env_sample 파일을 .env로 복사하여 사용하세요)
+    ├── __init__.py
+    └── agent.py # 에이전트, 도구 정의
+```
 
 ## 주요 기능
 
@@ -19,13 +26,13 @@ sAgent`를 통합하여 관리하고 호출하는 최상위 에이전트입니�
 
 *   **설명**: 사용자의 검색 요청을 받아 Google 검색을 수행하고 결과를 반환합니다.
 *   **모델**: `gemini-2.5-pro-preview-05-06`
-*   **도구**: `google_search` (내장 도구)
+*   **도구**: `google_search` (빌트인 도구)
 
 ### 2. CodeAgent
 
 *   **설명**: 사용자의 코드 실행 요청을 받아 코드를 실행하고 결과를 반환합니다.
 *   **모델**: `gemini-2.5-pro-preview-05-06`
-*   **도구**: `BuiltInCodeExecutor` (내장 도구)
+*   **도구**: `BuiltInCodeExecutor` (빌트인 도구)
 
 ### 3. MapsAgent
 
